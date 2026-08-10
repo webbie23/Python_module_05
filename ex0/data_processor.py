@@ -4,43 +4,43 @@ from typing import Any
 
 class DataProcessor(ABC):
     def __init__(self, data):
-        self.data = self.validate(data)
-    pass
+        self.data = data
+        self.store_data:str = []
 
     @abstractmethod
     def validate(self, data: Any) -> bool:
+        
         pass
 
     @abstractmethod
     def ingest(self, data: Any) -> None:
         pass
+    
 
     def output(self) -> tuple[int, str]:
-        pass
+        return (self.store_data)
 
 
 class NumericProcessor(DataProcessor):
     def __init__(self, data):
-        super().__init__(data)
-        self.store_data: list[float | int | list[int] | list[float]]
+        super().__init__(data, store_data)
 
-    @abstractmethod
-    def validate(self, data: Any) -> bool:
-        super().validate()
+    def validate(self) -> bool:
         try:
-            int(data)
-        except TypeError:
+            int(self.data)
+        except ValueError:
             try:
-                float(data)
-            except TypeError:
+                float(self.data)
+            except ValueError:
                 return(False)
-        self.store_data.append(data)
+        self.store_data.append(self.data)
+        return(True)
 
-    @abstractmethod
     def ingest(self, data: float | int | list[int] | list[float]) -> None:
         super().ingest()
         pass
 
+    
 
 class TextProcessor(DataProcessor):
     def __init__(self, data):
@@ -79,9 +79,11 @@ class LogProcessor(DataProcessor):
 def main():
     print("=== Code Nexus - Data Processor ===\n\n" \
             "Testing Numeric Processor...")
-    input_data: Any = [42, "Hello"]
-    for item in input_data:
-        print("Trying to validate input '{item}' :", NumericProcessor.validate(item))
+    a= NumericProcessor(42)
+    print(f"Trying to validate input '{a.validate()}' :")
+    a= NumericProcessor("Hello")
+    print(f"Trying to validate input '{a.validate()}' :")
+    
 
 
 
