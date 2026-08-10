@@ -5,7 +5,7 @@ from typing import Any
 class DataProcessor(ABC):
     def __init__(self, data):
         self.data = data
-        self.store_data:str = []
+        self.store_data:str = ['yes']
 
     @abstractmethod
     def validate(self, data: Any) -> bool:
@@ -23,7 +23,7 @@ class DataProcessor(ABC):
 
 class NumericProcessor(DataProcessor):
     def __init__(self, data):
-        super().__init__(data, store_data)
+        super().__init__(data)
 
     def validate(self) -> bool:
         try:
@@ -33,7 +33,7 @@ class NumericProcessor(DataProcessor):
                 float(self.data)
             except ValueError:
                 return(False)
-        self.store_data.append(self.data)
+        self.store_data.append(str(self.data))
         return(True)
 
     def ingest(self, data: float | int | list[int] | list[float]) -> None:
@@ -79,10 +79,12 @@ class LogProcessor(DataProcessor):
 def main():
     print("=== Code Nexus - Data Processor ===\n\n" \
             "Testing Numeric Processor...")
-    a= NumericProcessor(42)
-    print(f"Trying to validate input '{a.validate()}' :")
-    a= NumericProcessor("Hello")
-    print(f"Trying to validate input '{a.validate()}' :")
+    a = NumericProcessor("hello")
+    print(f"Trying to validate input '42'", a.validate()  )
+    #a= NumericProcessor("Hello")
+    #print(f"Trying to validate input '{a.validate()}' :")
+    print (a.store_data)
+    
     
 
 
