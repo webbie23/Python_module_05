@@ -19,8 +19,6 @@ class DataProcessor(ABC):
         pass
 
     def output(self) -> tuple[int, str]:
-        if len(self.stored_data) == 0:
-            return (0, '')
         oldest: tuple[int, str]
         if self.stored_data:
             oldest = (next(iter(self.stored_data)),

@@ -1,8 +1,23 @@
 #!/usr/bin/python3
 
 from abc import ABC, abstractmethod
-from typing import Any
+from typing import Any, Protocol
 
+
+class ExportPlugin(Protocol):
+
+    def process_output(self, data: list[tuple[int, str]]) -> None:
+        pass
+
+
+class make_csv(ExportPlugin):
+    def process_output(self, data: list[tuple[int, str]]) -> None:
+        output_data = ""
+        print("make_csv:", data)
+        for item in data:
+            output_data += item[1] + ', '
+        output_data = output_data[:-2]
+        print(output_data)
 
 class DataProcessor(ABC):
     def __init__(self) -> None:
@@ -20,12 +35,11 @@ class DataProcessor(ABC):
 
     def output(self) -> tuple[int, str]:
         oldest: tuple[int, str]
-        if len(self.stored_data) == 0:
-                        return (0,'')
         if self.stored_data:
-            oldest = (next(iter(self.stored_data)),
-                      self.stored_data.pop(next(iter(self.stored_data))))
-       
+            key = next(iter(self.stored_data))
+            oldest = (key , self.stored_data.pop(key))
+        else:
+            raise IndexError("Processor empty, no data to output")
         return (oldest)
 
 
@@ -131,7 +145,6 @@ class LogProcessor(DataProcessor):
                 self.stored_data[self.new_key] = a + ": " + b
                 self.new_key += 1
 
-
 class DataStream():
     def __init__(self) -> None:
         self.processors: list[DataProcessor] = []
@@ -142,15 +155,18 @@ class DataStream():
 
     def process_stream(self, stream: list[Any]) -> None:
         self.stream = stream
+        not_compliant = []
         if len(stream) == 0:
                     return
         for proccesor in self.processors:
             for item in self.stream:
                 if proccesor.validate(item) == True:
                     proccesor.ingest(item)
-                    stream.remove(item)             
+                    stream.remove(item)
+                else:
+                    not_compliant.append(item)           
         if len(self.stream) != 0:
-            for item in stream:
+            for item in not_compliant:
                 print (f"DataStream error - Can't process element in stream:", item)
         return
             
@@ -166,41 +182,48 @@ class DataStream():
                 f"remaining {len(proc_data.values())} on processor")
     
     def output_pipeline(self, nb: int, plugin: ExportPlugin) -> None:
-        pass
+        output_list = []
+        for processor in self.processors:
+            if len(processor.stored_data.values()) < nb:
+                raise IndexError ("Not enough data to output")
+            for x in range(nb):
+                output_list.append(processor.output())
+            plugin.process_output(output_list)
 
-class ExportPlugin(Protocol):
+                
+            
 
-    def process_output(self, data: list[tuple[int, str]]) -> None:
-        pass
-    
+
+     
+ 
 
 
 def main() -> None:
 
-    data: Any = (['Hello world', [3.14, -1, 2.71], [{'log_level': 'WARNING', ' log_message': 'Telnet access! Use ssh instead'}, {
-                 'log_level': 'INFO', 'log_message': 'User wil is connected'}], 42, ['Hi', 'five']])
-    print("=== Code Nexus - Data Stream ===\n\nInitialize Data Stream...\n== DataStream statistics ==\nNo processor found, no data\n\nRegistering Numeric Processor\n\nSend first batch of data on stream: ", data)
+    data: Any = (['Hello world', [3.14, -1, 2.71],
+                  [{'log_level': 'WARNING', ' log_message':
+                      'Telnet access! Use ssh instead'},
+                   {'log_level': 'INFO', 'log_message':
+                       'User wil is connected'}], 42, ['Hi', 'five']])
+
+    csv = make_csv()
+
+
+
     data_stream = DataStream()
-    num_proc = NumericProcessor()
-    data_stream.register_processor(num_proc)
+    num = NumericProcessor()
+    log = LogProcessor()
+    text = TextProcessor()
+
+    data_stream.register_processor(num)
+    data_stream.register_processor(log)
+    data_stream.register_processor(text)
     data_stream.process_stream(data.copy())
-    print("== DataStream statistics ==")
-    data_stream.print_processors_stats()
-    print("\nRegistering other data processors\nSend the same batch again\n== DataStream statistics ==")
-    text_proc = TextProcessor()
-    log_proc = LogProcessor()
-    data_stream.register_processor(text_proc)
-    data_stream.register_processor(log_proc)
-    data_stream.process_stream(data.copy())
-    data_stream.print_processors_stats()
-    print("\nConsume some elements from the data processors: Numeric 3, Text 2, Log 1")
-    num_proc.output()
-    num_proc.output()
-    num_proc.output()
-    text_proc.output()
-    text_proc.output()
-    log_proc.output()
-    data_stream.print_processors_stats()
+    data_stream.output_pipeline(2, csv)
+
+
+
+
     
     
 if __name__ == "__main__":

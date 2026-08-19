@@ -20,12 +20,11 @@ class DataProcessor(ABC):
 
     def output(self) -> tuple[int, str]:
         oldest: tuple[int, str]
-        if len(self.stored_data) == 0:
-            return (0, '')
         if self.stored_data:
-            oldest = (next(iter(self.stored_data)),
-                      self.stored_data.pop(next(iter(self.stored_data))))
-
+            key = next(iter(self.stored_data))
+            oldest = (key , self.stored_data.pop(key))
+        else:
+            raise IndexError("Processor empty, no data to output")
         return (oldest)
 
 
@@ -179,7 +178,6 @@ def main() -> None:
     data_stream.print_processors_stats()
     print("\nRegistering Numeric Processor\n\nSend first batch "
           "of data on stream: ", data)
-    data_stream = DataStream()
     num_proc = NumericProcessor()
     data_stream.register_processor(num_proc)
     data_stream.process_stream(data.copy())
@@ -202,5 +200,27 @@ def main() -> None:
     data_stream.print_processors_stats()
 
 
+def main2() -> None:
+
+    data: Any = ['Hello world', [3.14, -1, 2.71], [{'log_level': 'WARNING', ' log_message': 'Telnet access! Use ssh instead'}, {
+        'log_level': 'INFO', 'log_message': 'User wil is connected'}], 42, ['Hi', 'five']]
+
+        
+
+
+
+    data_stream = DataStream()
+    num = NumericProcessor()
+    log = LogProcessor()
+    text = TextProcessor()
+
+    data_stream.register_processor(num)
+    data_stream.register_processor(log)
+    data_stream.register_processor(text)
+    data_stream.process_stream(data)
+    print(text.stored_data)
+        
+
+
 if __name__ == "__main__":
-    main()
+    main2()
