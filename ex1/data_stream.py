@@ -20,6 +20,8 @@ class DataProcessor(ABC):
 
     def output(self) -> tuple[int, str]:
         oldest: tuple[int, str]
+        if len(self.stored_data) == 0:
+            return (0, '')
         if self.stored_data:
             oldest = (next(iter(self.stored_data)),
                       self.stored_data.pop(next(iter(self.stored_data))))
@@ -124,105 +126,80 @@ class LogProcessor(DataProcessor):
         if not test_data == self.valid_value:
             raise ValueError("Improper dictionary data")
         else:
-            print("test_data: ", test_data)
             for item in test_data:
                 a, b = item.values()
                 self.stored_data[self.new_key] = a + ": " + b
                 self.new_key += 1
 
+
 class DataStream():
-    def __init__(self):
-        self.processors = []
-        
+    def __init__(self) -> None:
+        self.processors: list[DataProcessor] = []
 
     def register_processor(self, proc: DataProcessor) -> None:
-        self.proc = proc()
-        self.processors.append([self.proc, 0])
-
-
-  
+        self.proc = proc
+        self.processors.append(self.proc)
 
     def process_stream(self, stream: list[Any]) -> None:
         self.stream = stream
+        if len(stream) == 0:
+            return
         for proccesor in self.processors:
             for item in self.stream:
-                if proccesor[0].validate(item) == True:
-                    proccesor[0].ingest(item)
+                if proccesor.validate(item) is True:
+                    proccesor.ingest(item)
                     stream.remove(item)
-                    proccesor[1] += 1
-            
-                    
-        
+        if len(self.stream) != 0:
+            for item in stream:
+                print("DataStream error - "
+                      "Can't process element in stream:", item)
+        return
+
     def print_processors_stats(self) -> None:
+        print("\n== DataStream statistics ==")
+        if len(self.processors) == 0:
+            print("No processor found, no data")
         for proccesor in self.processors:
-            print(f"{proccesor[0]}: total {proccesor[0].inde} items processed, remaining {len(proccesor[0].stored_data.values())} on processor")
-            print (proccesor[0].stored_data.values())
-        
-        #{len(proccesor.stored_data.values())}
- 
-def main():
+            proc_data = proccesor.stored_data
+            proc_name = str(proccesor).split('.')[1].split(' ')[0]
+            print(
+                f"{proc_name}: total {list(proc_data.keys())[-1]+1}"
+                f" items processed, "
+                f"remaining {len(proc_data.values())} on processor")
 
 
-    test = DataStream()
-    print (type(NumericProcessor))
-    print (type(NumericProcessor()))
-    #test.register_processor(NumericProcessor())
-
-
-
-    # test.register_processor(TextProcessor())
-    # data: Any = (['Hello world', [3.14, -1, 2.71], [{'log_level': 'WARNING', ' log_message': 'Telnet access! Use ssh instead'}, {'log_level': 'INFO', 'log_message': 'User wil is connected'}], 42, ['Hi', 'five']])
-    # test.process_stream(data)
-    # test.print_processors_stats()
-
-
-
-
-    # proc_num = DataStream()
-    # print("=== Code Nexus - Data Stream ===\n\nInitialize Data Stream...\n== DataStream statistics ==\nNo processor found, no data\n\nRegistering Numeric Processor\n\nSend first batch of data on stream: ", data)
-    # proc_num.register_processor(NumericProcessor())
-    # proc_num.register_processor(LogProcessor())
-    # proc_num.register_processor(TextProcessor())
-    # print(proc_num.processors)
-    # proc_num.process_stream(data)
-    # proc_num.print_processors_stats()
-    
-
-
-
-    # try:
-    #     proc_num.process_stream(data)
-    # except ValueError as e:
-
-    # proc_num.print_processors_stats()
-    # proc_num.process_stream(data)
-    # proc_num.print_processors_stats()
-    # print("\nRegistering other data processors\nSend the same batch again\n== DataStream statistics ==")
-    # proc_txt = DataStream()
-    # proc_txt.register_processor(TextProcessor())
-    # proc_log = DataStream()
-    # proc_log.register_processor(LogProcessor())
-    # proc_num.
-    
-    
-
-
-    
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+def main() -> None:
+    data: Any = (['Hello world', [3.14, -1, 2.71],
+                  [{'log_level': 'WARNING', ' log_message':
+                      'Telnet access! Use ssh instead'},
+                   {'log_level': 'INFO', 'log_message':
+                       'User wil is connected'}], 42, ['Hi', 'five']])
+    print("=== Code Nexus - Data Stream ===\n\nInitialize Data Stream")
+    data_stream = DataStream()
+    data_stream.print_processors_stats()
+    print("\nRegistering Numeric Processor\n\nSend first batch "
+          "of data on stream: ", data)
+    data_stream = DataStream()
+    num_proc = NumericProcessor()
+    data_stream.register_processor(num_proc)
+    data_stream.process_stream(data.copy())
+    data_stream.print_processors_stats()
+    print("\nRegistering other data processors\nSend the same batch again\n")
+    text_proc = TextProcessor()
+    log_proc = LogProcessor()
+    data_stream.register_processor(text_proc)
+    data_stream.register_processor(log_proc)
+    data_stream.process_stream(data.copy())
+    data_stream.print_processors_stats()
+    print("\nConsume some elements from the data processors:"
+          "Numeric 3, Text 2, Log 1")
+    num_proc.output()
+    num_proc.output()
+    num_proc.output()
+    text_proc.output()
+    text_proc.output()
+    log_proc.output()
+    data_stream.print_processors_stats()
 
 
 if __name__ == "__main__":

@@ -19,13 +19,13 @@ class DataProcessor(ABC):
         pass
 
     def output(self) -> tuple[int, str]:
-        if len(self.stored_data) == 0:
-            return (0, '')
         oldest: tuple[int, str]
+        if len(self.stored_data) == 0:
+                        return (0,'')
         if self.stored_data:
             oldest = (next(iter(self.stored_data)),
                       self.stored_data.pop(next(iter(self.stored_data))))
-
+       
         return (oldest)
 
 
@@ -126,61 +126,82 @@ class LogProcessor(DataProcessor):
         if not test_data == self.valid_value:
             raise ValueError("Improper dictionary data")
         else:
-            print("test_data: ", test_data)
             for item in test_data:
                 a, b = item.values()
                 self.stored_data[self.new_key] = a + ": " + b
                 self.new_key += 1
 
 
+class DataStream():
+    def __init__(self) -> None:
+        self.processors: list[DataProcessor] = []
+
+    def register_processor(self, proc: DataProcessor) -> None:
+        self.proc = proc
+        self.processors.append(self.proc)
+
+    def process_stream(self, stream: list[Any]) -> None:
+        self.stream = stream
+        if len(stream) == 0:
+                    return
+        for proccesor in self.processors:
+            for item in self.stream:
+                if proccesor.validate(item) == True:
+                    proccesor.ingest(item)
+                    stream.remove(item)             
+        if len(self.stream) != 0:
+            for item in stream:
+                print (f"DataStream error - Can't process element in stream:", item)
+        return
+            
+
+    def print_processors_stats(self) -> None:
+        if len(self.processors) == 0:
+            print("No processor found, no data")
+        for proccesor in self.processors:
+            proc_data = proccesor.stored_data
+            proc_name = str(proccesor).split('.')[1].split(' ')[0]
+            print(
+                f"{proc_name}: total {list(proc_data.keys())[-1]+1} items processed, "
+                f"remaining {len(proc_data.values())} on processor")
+    
+    def output_pipeline(self, nb: int, plugin: ExportPlugin) -> None:
+        pass
+
+class ExportPlugin(Protocol):
+
+    def process_output(self, data: list[tuple[int, str]]) -> None:
+        pass
+    
+
+
 def main() -> None:
-    print("=== Code Nexus - Data Processor ===\n\n"
-          "Testing Numeric Processor...")
-    proc_test = NumericProcessor()
-    print(f" Trying to validate input '42': {proc_test.validate(42)}")
-    print(
-        f" Trying to validate input 'hello'  : {proc_test.validate("hello")}")
-    print(" Test invalid ingestion of string 'foo' without prior validation:")
-    try:
-        proc_test.ingest("foo")
-    except ValueError as e:
-        print(" Got exception:", e)
-    print(" Processing data: [1, 2, 3, 4, 5]")
-    proc_test.validate([-1, 2, 3, 4, 5])
-    proc_test.ingest([-1, 2, 3, 4, 5])
-    print(" Extracting 3 values...")
-    n = proc_test.output()
-    print(f" Numeric value {n[0]} :{n[1]}")
-    n = proc_test.output()
-    print(f" Numeric value {n[0]} :{n[1]}")
-    n = proc_test.output()
-    print(f" Numeric value {n[0]} :{n[1]}")
-    print("\nTesting Text Processor...")
-    text_test = TextProcessor()
-    print(" Trying to validate input '42': ", text_test.validate(42))
-    print(" Processing data: ['Hello', 'Nexus', 'World']")
-    text_test.validate(['Hello', 'Nexus', 'World'])
-    text_test.ingest(['Hello', 'Nexus', 'World'])
-    print(" Extracting 1 value...")
-    t = text_test.output()
-    print(f" Text value {t[0]} :{t[1]}")
-    print("\nTesting Log Processor...")
-    log_test = LogProcessor()
-    print(" Trying to validate input 'Hello' : ",
-          log_test.validate("Hello"))
-    log_test_list = [{'log_level': 'NOTICE',
-                      'log_message': 'Connection to server'},
-                     {'log_level': 'ERROR',
-                      'log_message': 'Unauthorized access!!'}]
-    print(f" Processing data: {log_test_list}")
-    log_test.validate(log_test_list)
-    log_test.ingest(log_test_list)
-    print(" Extracting 2 values...")
-    test_log: tuple[int, str] = log_test.output()
-    print(f" Numeric value {test_log[0]}: {test_log[1]}")
-    test_log = log_test.output()
-    print(f" Numeric value {test_log[0]}: {test_log[1]}")
 
-
+    data: Any = (['Hello world', [3.14, -1, 2.71], [{'log_level': 'WARNING', ' log_message': 'Telnet access! Use ssh instead'}, {
+                 'log_level': 'INFO', 'log_message': 'User wil is connected'}], 42, ['Hi', 'five']])
+    print("=== Code Nexus - Data Stream ===\n\nInitialize Data Stream...\n== DataStream statistics ==\nNo processor found, no data\n\nRegistering Numeric Processor\n\nSend first batch of data on stream: ", data)
+    data_stream = DataStream()
+    num_proc = NumericProcessor()
+    data_stream.register_processor(num_proc)
+    data_stream.process_stream(data.copy())
+    print("== DataStream statistics ==")
+    data_stream.print_processors_stats()
+    print("\nRegistering other data processors\nSend the same batch again\n== DataStream statistics ==")
+    text_proc = TextProcessor()
+    log_proc = LogProcessor()
+    data_stream.register_processor(text_proc)
+    data_stream.register_processor(log_proc)
+    data_stream.process_stream(data.copy())
+    data_stream.print_processors_stats()
+    print("\nConsume some elements from the data processors: Numeric 3, Text 2, Log 1")
+    num_proc.output()
+    num_proc.output()
+    num_proc.output()
+    text_proc.output()
+    text_proc.output()
+    log_proc.output()
+    data_stream.print_processors_stats()
+    
+    
 if __name__ == "__main__":
     main()
