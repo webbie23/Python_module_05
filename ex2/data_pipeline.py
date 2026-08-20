@@ -155,20 +155,22 @@ class DataStream():
 
     def process_stream(self, stream: list[Any]) -> None:
         self.stream = stream
-        not_compliant = []
+        not_true = []
         if len(stream) == 0:
-                    return
+            return
         for proccesor in self.processors:
             for item in self.stream:
-                if proccesor.validate(item) == True:
+                if proccesor.validate(item) is True:
                     proccesor.ingest(item)
-                    stream.remove(item)
-                else:
-                    not_compliant.append(item)           
+                else: 
+                    not_true.append(item)
+            self.stream = not_true
         if len(self.stream) != 0:
-            for item in not_compliant:
-                print (f"DataStream error - Can't process element in stream:", item)
+            for item in self.stream:
+                print("DataStream error - "
+                      "Can't process element in stream:", item)
         return
+
             
 
     def print_processors_stats(self) -> None:
