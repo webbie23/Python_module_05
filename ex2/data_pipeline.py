@@ -12,20 +12,22 @@ class ExportPlugin(Protocol):
 
 class make_csv(ExportPlugin):
     def process_output(self, data: list[tuple[int, str]]) -> None:
-        output_string= ""
+        output_string = ""
         for item in data:
-            output_string+= item[1] + ', '
-        output_string= output_string[:-2]
-        print("CSV Output:\n", output_string)
+            output_string += item[1] + ', '
+        print("CSV Output:")
+        print(output_string[:-2])
+
 
 class make_json(ExportPlugin):
     def process_output(self, data: list[tuple[int, str]]) -> None:
-        output_string= ""
+        output_string = ""
         for item in data:
-            output_string += '"' + item + '", '
-        output_string= output_string[:-2]
-        output_string= "{" + output_string+ "}"
-        print("JSON Output:\n", output_string)
+            output_string += "\"item_" + \
+                str(item[0]) + "\", \"" + item[1] + "\", \""
+        output_string = "{" + output_string[:-3] + "}"
+        print("JSON Output:")
+        print(output_string)
 
 
 class DataProcessor(ABC):
@@ -46,7 +48,7 @@ class DataProcessor(ABC):
         oldest: tuple[int, str]
         if self.stored_data:
             key = next(iter(self.stored_data))
-            oldest = (key , self.stored_data.pop(key))
+            oldest = (key, self.stored_data.pop(key))
         else:
             raise IndexError("Processor empty, no data to output")
         return (oldest)
@@ -154,6 +156,7 @@ class LogProcessor(DataProcessor):
                 self.stored_data[self.new_key] = a + ": " + b
                 self.new_key += 1
 
+
 class DataStream():
     def __init__(self) -> None:
         self.processors: list[DataProcessor] = []
@@ -171,7 +174,7 @@ class DataStream():
             for item in self.stream:
                 if proccesor.validate(item) is True:
                     proccesor.ingest(item)
-                else: 
+                else:
                     not_true.append(item)
             self.stream = not_true
         if len(self.stream) != 0:
@@ -179,33 +182,28 @@ class DataStream():
                 print("DataStream error - "
                       "Can't process element in stream:", item)
         return
-            
 
     def print_processors_stats(self) -> None:
+        print("\n== DataStream statistics ==")
         if len(self.processors) == 0:
             print("No processor found, no data")
+            return
         for proccesor in self.processors:
             proc_data = proccesor.stored_data
             proc_name = str(proccesor).split('.')[1].split(' ')[0]
             print(
-                f"{proc_name}: total {list(proc_data.keys())[-1]+1} items processed, "
+                f"{proc_name}: {proccesor.new_key} items processed, "
                 f"remaining {len(proc_data.values())} on processor")
-    
+
     def output_pipeline(self, nb: int, plugin: ExportPlugin) -> None:
-        output_list = []
         for processor in self.processors:
-            if len(processor.stored_data.values()) < nb:
-                nb = len(processor.stored_data.values())
-            for x in range(nb):
+            output_list = []
+            times = nb
+            if len(processor.stored_data.values()) < times:
+                times = len(processor.stored_data.values())
+            for x in range(times):
                 output_list.append(processor.output())
             plugin.process_output(output_list)
-
-                
-            
-
-
-     
- 
 
 
 def main() -> None:
@@ -215,14 +213,16 @@ def main() -> None:
                       'Telnet access! Use ssh instead'},
                    {'log_level': 'INFO', 'log_message':
                        'User wil is connected'}], 42, ['Hi', 'five']])
-    data2: any= ([21, ['I love AI', 'LLMs are wonderful', 'Stay healthy']
-                  , [{'log_level': 'ERROR','log_message': '500 server crash'},
-                     {'log_level': 'NOTICE', 'log_message': 'Certificate expires in 10 days'}],
-                       [32, 42, 64, 84, 128, 168], 'World hello'])
-    print("=== Code Nexus - Data Pipeline ===")
+    data2: Any = ([21, ['I love AI', 'LLMs are wonderful', 'Stay healthy'],
+                   [{'log_level': 'ERROR', 'log_message': '500 server crash'},
+                    {'log_level': 'NOTICE',
+                     'log_message': 'Certificate expires in 10 days'}],
+                  [32, 42, 64, 84, 128, 168], 'World hello'])
+    print("=== Code Nexus - Data Pipeline ===\n")
+    print("Initialize Data Stream...\n")
     data_stream = DataStream()
     data_stream.print_processors_stats()
-    
+    print("\nRegistering Processors")
     num = NumericProcessor()
     log = LogProcessor()
     text = TextProcessor()
@@ -231,22 +231,21 @@ def main() -> None:
     data_stream.register_processor(text)
     csv = make_csv()
     json = make_json()
-    
-    print("\nSend first batch of data om stream: ", data1)
+
+    print(f"\nSend first batch of data om stream: {data1}\n")
     data_stream.process_stream(data1)
     data_stream.print_processors_stats()
-    print("Send 3 processed data from each processor to a CSV plugin:")
-    data_stream.output_pipeline(3 , csv)
+    print("\nSend 3 processed data from each processor to a CSV plugin:")
+    data_stream.output_pipeline(3, csv)
     data_stream.print_processors_stats()
-    
+
     print("\nSend an other batch of data: ", data2)
+    data_stream.process_stream(data2)
     data_stream.print_processors_stats()
-    print("Send 5 processed data from each processor to a JSON plugin")
-    data_stream.output_pipeline(3 , json)
+    print("\nSend 5 processed data from each processor to a JSON plugin")
+    data_stream.output_pipeline(5, json)
     data_stream.print_processors_stats()
-    
-    
-  
-    
+
+
 if __name__ == "__main__":
     main()

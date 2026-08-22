@@ -144,8 +144,8 @@ def main() -> None:
     except ValueError as e:
         print(" Got exception:", e)
     print(" Processing data: [1, 2, 3, 4, 5]")
-    proc_test.validate([-1, 2, 3, 4, 5])
-    proc_test.ingest([-1, 2, 3, 4, 5])
+    proc_test.validate([1, 2, 3, 4, 5])
+    proc_test.ingest([1, 2, 3, 4, 5])
     print(" Extracting 3 values...")
     n = proc_test.output()
     print(f" Numeric value {n[0]} :{n[1]}")

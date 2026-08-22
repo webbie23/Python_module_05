@@ -22,7 +22,7 @@ class DataProcessor(ABC):
         oldest: tuple[int, str]
         if self.stored_data:
             key = next(iter(self.stored_data))
-            oldest = (key , self.stored_data.pop(key))
+            oldest = (key, self.stored_data.pop(key))
         else:
             raise IndexError("Processor empty, no data to output")
         return (oldest)
@@ -148,10 +148,10 @@ class DataStream():
             for item in self.stream:
                 if proccesor.validate(item) is True:
                     proccesor.ingest(item)
-                else: 
+                else:
                     not_true.append(item)
             self.stream = not_true
-        
+
         if len(self.stream) != 0:
             for item in self.stream:
                 print("DataStream error - "
