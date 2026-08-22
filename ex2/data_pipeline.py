@@ -12,12 +12,21 @@ class ExportPlugin(Protocol):
 
 class make_csv(ExportPlugin):
     def process_output(self, data: list[tuple[int, str]]) -> None:
-        output_data = ""
-        print("make_csv:", data)
+        output_string= ""
         for item in data:
-            output_data += item[1] + ', '
-        output_data = output_data[:-2]
-        print(output_data)
+            output_string+= item[1] + ', '
+        output_string= output_string[:-2]
+        print("CSV Output:\n", output_string)
+
+class make_json(ExportPlugin):
+    def process_output(self, data: list[tuple[int, str]]) -> None:
+        output_string= ""
+        for item in data:
+            output_string += '"' + item + '", '
+        output_string= output_string[:-2]
+        output_string= "{" + output_string+ "}"
+        print("JSON Output:\n", output_string)
+
 
 class DataProcessor(ABC):
     def __init__(self) -> None:
@@ -155,10 +164,10 @@ class DataStream():
 
     def process_stream(self, stream: list[Any]) -> None:
         self.stream = stream
-        not_true = []
         if len(stream) == 0:
             return
         for proccesor in self.processors:
+            not_true = []
             for item in self.stream:
                 if proccesor.validate(item) is True:
                     proccesor.ingest(item)
@@ -170,7 +179,6 @@ class DataStream():
                 print("DataStream error - "
                       "Can't process element in stream:", item)
         return
-
             
 
     def print_processors_stats(self) -> None:
@@ -187,7 +195,7 @@ class DataStream():
         output_list = []
         for processor in self.processors:
             if len(processor.stored_data.values()) < nb:
-                raise IndexError ("Not enough data to output")
+                nb = len(processor.stored_data.values())
             for x in range(nb):
                 output_list.append(processor.output())
             plugin.process_output(output_list)
@@ -202,31 +210,43 @@ class DataStream():
 
 def main() -> None:
 
-    data: Any = (['Hello world', [3.14, -1, 2.71],
+    data1: Any = (['Hello world', [3.14, -1, 2.71],
                   [{'log_level': 'WARNING', ' log_message':
                       'Telnet access! Use ssh instead'},
                    {'log_level': 'INFO', 'log_message':
                        'User wil is connected'}], 42, ['Hi', 'five']])
-
-    csv = make_csv()
-
-
-
+    data2: any= ([21, ['I love AI', 'LLMs are wonderful', 'Stay healthy']
+                  , [{'log_level': 'ERROR','log_message': '500 server crash'},
+                     {'log_level': 'NOTICE', 'log_message': 'Certificate expires in 10 days'}],
+                       [32, 42, 64, 84, 128, 168], 'World hello'])
+    print("=== Code Nexus - Data Pipeline ===")
     data_stream = DataStream()
+    data_stream.print_processors_stats()
+    
     num = NumericProcessor()
     log = LogProcessor()
     text = TextProcessor()
-
     data_stream.register_processor(num)
     data_stream.register_processor(log)
     data_stream.register_processor(text)
-    data_stream.process_stream(data.copy())
-    data_stream.output_pipeline(2, csv)
-
-
-
-
+    csv = make_csv()
+    json = make_json()
     
+    print("\nSend first batch of data om stream: ", data1)
+    data_stream.process_stream(data1)
+    data_stream.print_processors_stats()
+    print("Send 3 processed data from each processor to a CSV plugin:")
+    data_stream.output_pipeline(3 , csv)
+    data_stream.print_processors_stats()
+    
+    print("\nSend an other batch of data: ", data2)
+    data_stream.print_processors_stats()
+    print("Send 5 processed data from each processor to a JSON plugin")
+    data_stream.output_pipeline(3 , json)
+    data_stream.print_processors_stats()
+    
+    
+  
     
 if __name__ == "__main__":
     main()

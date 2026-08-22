@@ -141,16 +141,17 @@ class DataStream():
 
     def process_stream(self, stream: list[Any]) -> None:
         self.stream = stream
-        not_true = []
         if len(stream) == 0:
             return
         for proccesor in self.processors:
+            not_true = []
             for item in self.stream:
                 if proccesor.validate(item) is True:
                     proccesor.ingest(item)
                 else: 
                     not_true.append(item)
             self.stream = not_true
+        
         if len(self.stream) != 0:
             for item in self.stream:
                 print("DataStream error - "
@@ -203,29 +204,5 @@ def main() -> None:
     data_stream.print_processors_stats()
 
 
-def main2() -> None:
-
-    # #data: Any = (['Hello world', [3.14, -1, 2.71],
-    #                   [{'log_level': 'WARNING', ' log_message':
-    #                       'Telnet access! Use ssh instead'},
-    #                    {'log_level': 'INFO', 'log_message':
-    #                        'User wil is connected'}], 42, ['Hi', 'five']])
-
-    data: Any = ([42,'Hello world',42,'Hello world',42,42])
-
-    data_stream = DataStream()
-    #num = NumericProcessor()
-    #log = LogProcessor()
-    text = TextProcessor()
-
-    data_stream.register_processor(text)
-    #data_stream.register_processor(log)
-    #data_stream.register_processor(num)
-    data_stream.process_stream(data.copy())
-    
-    print(text.stored_data)
-        
-
-
 if __name__ == "__main__":
-    main2()
+    main()
